@@ -1,3 +1,5 @@
+#pragma once
+
 enum class InstructionType {
 
     rFormat, iFormat, sFormat, bFormat, jFormat, uFormat
@@ -6,7 +8,7 @@ enum class InstructionType {
 };
 
 
-struct instruction {
+struct Instruction {
 
     //no need for character array since this is after decoding we only need 
     //integer values
@@ -15,6 +17,8 @@ struct instruction {
     int rs1;
     int rs2;
     int immediate;
+    int funct3;
+    int funct7;
     InstructionType type;
 
 
