@@ -44,7 +44,7 @@ InstructionType decode_instruction_type(uint32_t raw) {
         return InstructionType::uFormat;
 
         default:
-        return InstructionType::uFormat;
+        return InstructionType::UNKNOWN;
     }
 
 };

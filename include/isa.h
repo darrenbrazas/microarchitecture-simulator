@@ -1,13 +1,14 @@
 #pragma once
 
+//different instruction formats
 enum class InstructionType {
 
-    rFormat, iFormat, sFormat, bFormat, jFormat, uFormat
+    rFormat, iFormat, sFormat, bFormat, jFormat, uFormat, UNKNOWN
 
 
 };
 
-
+//each instruction type has these componenets exclusive or not
 struct Instruction {
 
     //no need for character array since this is after decoding we only need 
