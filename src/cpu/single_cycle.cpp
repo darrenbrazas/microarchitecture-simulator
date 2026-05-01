@@ -2,6 +2,7 @@
 #include "../../include/registers.h"
 #include "../../include/memory.h"
 #include "../../include/decode.h"
+#include <iostream>
 
 //single cycle cpu that takes in parameters of memory and register file
 void run_single_cycle(Memory& mem, RegisterFile& rf){
@@ -10,6 +11,8 @@ void run_single_cycle(Memory& mem, RegisterFile& rf){
     //we would like it to start from pc = 0
 
     int programCounter = 0;
+    int cycles = 0;
+    int instructionCount = 0;
 
     bool running = true;
 
@@ -224,10 +227,6 @@ void run_single_cycle(Memory& mem, RegisterFile& rf){
 
                 break;
 
-                
-
-        
-
             case 0x6F:
 
                 rf.write(instruction.rd, programCounter * 4);
@@ -251,6 +250,15 @@ void run_single_cycle(Memory& mem, RegisterFile& rf){
 
         }
 
+        if(raw != 0) instructionCount++;
+
+        cycles++;
+
     }
+
+    std::cout << "Metrics";
+    std::cout << "Cycles " << cycles << "\n";
+    std::cout << "Instruction Count " << instructionCount << "\n";
+    std::cout << "CPI: " <<  cycles/instructionCount;
     
 };
