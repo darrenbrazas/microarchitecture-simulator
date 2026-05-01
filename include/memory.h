@@ -14,7 +14,7 @@ struct Memory {
     //void type function so it should not return a data type (void)
     void store(uint16_t address, int value){
 
-       
+        
 
             memory[address] = value;
         

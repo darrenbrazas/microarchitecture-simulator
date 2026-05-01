@@ -34,10 +34,69 @@ void run_single_cycle(Memory& mem, RegisterFile& rf){
         //increment program counter after
         programCounter++;
 
+        if(raw == 0) running = false;
+
         //2. Decode
 
         Instruction instruction = decode(raw);
 
+        //3. Execute 
+
+        switch(instruction.opcode) {
+
+            case 0x33:
+
+                //add
+                if(instruction.funct3 == 0x0 && instruction.funct7 == 0x00){
+
+                    int val1 = rf.read(instruction.rs1);
+                    int val2 = rf.read(instruction.rs2);
+                    rf.write(instruction.rd, val1 + val2);
+
+                }
+
+                //sub
+               
+                if(instruction.funct3 == 0x0 && instruction.funct7 == 0x20){
+
+                    int val1 = rf.read(instruction.rs1);
+                    int val2 = rf.read(instruction.rs2);
+                    rf.write(instruction.rd, val1 + val2);
+
+                }
+
+
+
+                break; 
+
+       
+
+            case 0x13:
+
+        
+
+            case 0x03:
+
+        
+
+            case 0x23:
+
+
+            case 0x63:
+
+        
+
+            case 0x6F:
+        
+
+            case 0x37:
+            case 0x17:
+
+
+            default:
+        
+
+        }
 
     }
     
