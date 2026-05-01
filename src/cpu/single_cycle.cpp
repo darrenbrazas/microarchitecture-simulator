@@ -61,28 +61,132 @@ void run_single_cycle(Memory& mem, RegisterFile& rf){
 
                     int val1 = rf.read(instruction.rs1);
                     int val2 = rf.read(instruction.rs2);
-                    rf.write(instruction.rd, val1 + val2);
+                    rf.write(instruction.rd, val1 - val2);
 
                 }
 
+                //XOR
 
+                if(instruction.funct3 == 0x4 && instruction.funct7 == 0x00){
+
+                    int val1 = rf.read(instruction.rs1);
+                    int val2 = rf.read(instruction.rs2);
+                    rf.write(instruction.rd, val1 ^ val2);
+
+                }
+
+                //AND
+
+                if(instruction.funct3 == 0x7 && instruction.funct7 == 0x00){
+
+                    int val1 = rf.read(instruction.rs1);
+                    int val2 = rf.read(instruction.rs2);
+                    rf.write(instruction.rd, val1 & val2);
+
+                }
+
+                //OR
+
+                if(instruction.funct3 == 0x6 && instruction.funct7 == 0x00){
+
+                    int val1 = rf.read(instruction.rs1);
+                    int val2 = rf.read(instruction.rs2);
+                    rf.write(instruction.rd, val1 | val2);
+
+                }
+
+                //SLL
+                if(instruction.funct3 == 0x1 && instruction.funct7 == 0x00){
+
+                    int val1 = rf.read(instruction.rs1);
+                    int val2 = rf.read(instruction.rs2);
+                    rf.write(instruction.rd, val1 << val2);
+
+                }
+
+                //SRL
+                if(instruction.funct3 == 0x5 && instruction.funct7 == 0x00){
+
+                    int val1 = rf.read(instruction.rs1);
+                    int val2 = rf.read(instruction.rs2);
+                    rf.write(instruction.rd, val1 >> val2);
+
+                }
 
                 break; 
 
        
-
+            //I type instructions
             case 0x13:
 
-        
+                //ADDI
+                if(instruction.funct3 == 0x0){
 
+                    int val1 = rf.read(instruction.rs1);
+                    int immediate = instruction.immediate;
+                    rf.write(instruction.rd, val1 + immediate);
+
+                }
+
+                //XORI
+                if(instruction.funct3 == 0x4){
+
+                    int val1 = rf.read(instruction.rs1);
+                    int immediate = instruction.immediate;
+                    rf.write(instruction.rd, val1 ^ immediate);
+
+                }
+
+                //ANDI
+                if(instruction.funct3 == 0x7){
+
+                    int val1 = rf.read(instruction.rs1);
+                    int immediate = instruction.immediate;
+                    rf.write(instruction.rd, val1 & immediate);
+
+                }
+
+                //ORI
+                if(instruction.funct3 == 0x6){
+
+                    int val1 = rf.read(instruction.rs1);
+                    int immediate = instruction.immediate;
+                    rf.write(instruction.rd, val1 | immediate);
+
+                }
+
+                break;
+
+            //I-type LW
             case 0x03:
 
-        
+                if(instruction.funct3 == 0x2){
 
+                    int val1 = rf.read(instruction.rs1);
+                    int immediate = instruction.immediate;
+                    int memAddr = mem.load(val1 + immediate);
+                    rf.write(instruction.rd, memAddr);
+
+                }
+        
+            //S-Type SW
             case 0x23:
+
+                if(instruction.funct3 == 0x2){
+
+                    int address = rf.read(instruction.rs1) + instruction.immediate;
+                    int value = rf.read(instruction.rs2);
+                    mem.store(address, value);
+
+
+                }
+
+                break;
 
 
             case 0x63:
+
+                
 
         
 
