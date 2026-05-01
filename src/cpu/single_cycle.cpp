@@ -168,6 +168,8 @@ void run_single_cycle(Memory& mem, RegisterFile& rf){
                     rf.write(instruction.rd, memAddr);
 
                 }
+
+                break;
         
             //S-Type SW
             case 0x23:
@@ -186,18 +188,65 @@ void run_single_cycle(Memory& mem, RegisterFile& rf){
 
             case 0x63:
 
+                //BEQ
+                if(instruction.funct3 == 0x0){
+
+                    int val1 = rf.read(instruction.rs1);
+                    int val2 = rf.read(instruction.rs2);
+
+                    int zeroFlag = val1 - val2;
+
+                    if(zeroFlag == 0){
+
+                        programCounter = (programCounter - 1) + (instruction.immediate / 4);
+
+                    }
+
+
+                }
+
+                //BNE
+                if(instruction.funct3 == 0x1){
+
+                    int val1 = rf.read(instruction.rs1);
+                    int val2 = rf.read(instruction.rs2);
+
+                    int zeroFlag = val1 - val2;
+
+                    if(zeroFlag != 0){
+
+                        programCounter = (programCounter - 1) + (instruction.immediate / 4);
+
+                    }
+
+
+                }
+
+                break;
+
                 
 
         
 
             case 0x6F:
-        
 
+                rf.write(instruction.rd, programCounter * 4);
+                programCounter = (programCounter - 1) + (instruction.immediate / 4);
+        
+                break;
             case 0x37:
+
+                rf.write(instruction.rd, instruction.immediate << 12);
+                break;
             case 0x17:
+                
+                rf.write(instruction.rd, (programCounter - 1) * 4 + (instruction.immediate << 12));
+                break;
 
 
             default:
+                running = false;
+                break;
         
 
         }
