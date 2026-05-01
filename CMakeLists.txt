@@ -7,8 +7,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # Include headers
 include_directories(include)
 
-# Collect all source files
-file(GLOB_RECURSE SOURCES "src/**/*.cpp")
+# Explicitly list source files
+set(SOURCES
+    src/isa/decode.cpp
+    src/cpu/single_cycle.cpp
+)
 
 # Main executable
 add_executable(simulator main.cpp ${SOURCES})

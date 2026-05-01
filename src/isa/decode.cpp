@@ -73,6 +73,12 @@ Instruction decode(uint32_t raw) {
 
         inst.immediate = (raw >> 20) & 0x0FFF;
 
+        // sign extend 12-bit immediate
+        if(inst.immediate & (1 << 11)){
+            inst.immediate |= ~((1 << 12) - 1);
+        }
+
+
     }else if (inst.type == InstructionType::sFormat){
 
         inst.immediate = ((raw >> 25) & 0x7F) << 5 | ((raw >> 7) & 0x1F);
@@ -84,6 +90,11 @@ Instruction decode(uint32_t raw) {
                        | ((raw >> 25) & 0x3F) << 5
                        | ((raw >> 8)  & 0xF)  << 1;
 
+        // sign extend 13-bit immediate
+        if(inst.immediate & (1 << 12)){
+            inst.immediate |= ~((1 << 13) - 1);
+        }
+
     } else if(inst.type == InstructionType::uFormat){
 
         inst.immediate = (raw >> 12) & 0xFFFFF;
@@ -94,6 +105,11 @@ Instruction decode(uint32_t raw) {
                        | ((raw >> 12) & 0xFF)   << 12
                        | ((raw >> 20) & 0x1)    << 11
                        | ((raw >> 21) & 0x3FF)  << 1;
+
+        // sign extend 21-bit immediate
+        if(inst.immediate & (1 << 20)){
+            inst.immediate |= ~((1 << 21) - 1);
+        }               
 
     } else {
         inst.immediate = 0;

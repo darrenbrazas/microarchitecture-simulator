@@ -255,8 +255,9 @@ void run_single_cycle(Memory& mem, RegisterFile& rf){
         cycles++;
 
     }
+    std::cout << "x1 (sum) = " << rf.read(1) << "\n";
 
-    std::cout << "Metrics";
+    std::cout << "//Metrics//";
     std::cout << "Cycles " << cycles << "\n";
     std::cout << "Instruction Count " << instructionCount << "\n";
     std::cout << "CPI: " <<  cycles/instructionCount;
