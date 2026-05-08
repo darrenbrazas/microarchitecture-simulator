@@ -18,6 +18,9 @@ void run_single_cycle(Memory& mem, RegisterFile& rf){
 
     while (running)
     {
+
+        //Might look like a pipelines CPU but no individual functions for each stage thus it is a single cycle cpu
+
         //1. Fetch
         //each memory address takes one address (one slot) we load each byte then shift left
         /*
@@ -255,6 +258,8 @@ void run_single_cycle(Memory& mem, RegisterFile& rf){
         cycles++;
 
     }
+
+    
     std::cout << "x1 (sum) = " << rf.read(1) << "\n";
 
     std::cout << "//Metrics//";

@@ -5,7 +5,7 @@
 #include "include/decode.h"
 #include "programs/loop_sum.h"
 
-void run_single_cycle(Memory& mem, RegisterFile& rf);
+void run_pipeline(Memory& mem, RegisterFile& rf);
 
 int main() {
 
@@ -26,6 +26,6 @@ int main() {
 
     }
     
-    run_single_cycle(mem, rf);
+    run_pipeline(mem, rf);
     return 0;
 }

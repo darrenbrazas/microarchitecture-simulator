@@ -11,6 +11,7 @@ include_directories(include)
 set(SOURCES
     src/isa/decode.cpp
     src/cpu/single_cycle.cpp
+    src/cpu/pipeline.cpp
 )
 
 # Main executable
