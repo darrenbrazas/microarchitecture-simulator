@@ -40,7 +40,7 @@ void MEM(EX_MEM& ex_mem, MEM_WB& mem_wb, Memory& mem) {
     }
 }
 
-void EX(ID_EX& id_ex, EX_MEM& ex_mem) {
+void EX(ID_EX& id_ex, EX_MEM& ex_mem, IF_ID& if_id, int& programCounter, int& numFlushes) {
     ex_mem.valid = id_ex.valid;
     if(!id_ex.valid) return;
 
@@ -71,6 +71,35 @@ void EX(ID_EX& id_ex, EX_MEM& ex_mem) {
             ex_mem.result = 0;
             break;
     }
+
+    //branch handling
+    //branch opcode (B-type)
+    if(id_ex.inst.opcode == 0x63) {
+
+
+        int val1 = id_ex.rs1_val;
+        int val2 = id_ex.rs2_val;
+        bool taken = false;
+
+        if(id_ex.inst.funct3 == 0x0 && val1 == val2){
+            taken = true; //BEQ
+        }
+
+        if(id_ex.inst.funct3 == 0x1 && val1 != val2){
+            taken = true; //BNE
+        }
+
+        if(taken) {
+            //if branch taken then we flush IF and ID and move the program counter to the branched location
+            //increment number of flushes
+            programCounter = id_ex.pc + (id_ex.inst.immediate / 4);
+            if_id.valid = false;
+            id_ex.valid = false;
+            numFlushes++;
+        }
+
+    }
+    
 }
 
 void ID(IF_ID& if_id, ID_EX& id_ex, RegisterFile& rf) {
@@ -101,7 +130,7 @@ void IF(IF_ID& if_id, Memory& mem, int& programCounter, bool& running) {
     programCounter++;
 }
 
-bool hazard_detection(ID_EX& id_ex, IF_ID& if_id) {
+bool hazard_detection(ID_EX& id_ex, EX_MEM& ex_mem, IF_ID& if_id) {
 
     if(!id_ex.valid) return false;
     if(id_ex.inst.rd == 0) return false;
@@ -109,6 +138,8 @@ bool hazard_detection(ID_EX& id_ex, IF_ID& if_id) {
     //returns true if a harzard is detected.
     if (id_ex.inst.rd == if_id.inst.rs1) return true;
     if (id_ex.inst.rd == if_id.inst.rs2) return true;
+
+    return false;
 
 }
 void  run_pipeline(Memory& mem, RegisterFile& rf){
@@ -118,6 +149,7 @@ void  run_pipeline(Memory& mem, RegisterFile& rf){
     int cycles = 0;
     int instructionCount = 0;
     int numStalls = 0;
+    int numFlushes = 0;
 
     bool running = true;
 
@@ -139,11 +171,11 @@ void  run_pipeline(Memory& mem, RegisterFile& rf){
         MEM(ex_mem, mem_wb, mem);
 
         //EX
-        EX(id_ex, ex_mem);
+        EX(id_ex, ex_mem, if_id, programCounter, numFlushes);
 
         //Insert Hazard Detection
 
-        if(hazard_detection(id_ex, if_id) == true) {
+        if(hazard_detection(id_ex, ex_mem, if_id) == true) {
 
             //if it returns true that means a hazard detection was discovered thus we have to stall/bubble
 
@@ -167,7 +199,7 @@ void  run_pipeline(Memory& mem, RegisterFile& rf){
     for(int i = 0; i < 4; i++) {
         WB(mem_wb, rf, instructionCount);
         MEM(ex_mem, mem_wb, mem);
-        EX(id_ex, ex_mem);
+        EX(id_ex, ex_mem, if_id, programCounter, numFlushes);
         ID(if_id, id_ex, rf);
         cycles++;
     }
@@ -180,5 +212,6 @@ void  run_pipeline(Memory& mem, RegisterFile& rf){
     std::cout << "Instructions: " << instructionCount << "\n";
     std::cout << "CPI:          " << (float)cycles / instructionCount << "\n";
     std::cout << "Stalls:       " << numStalls << "\n";
+    std::cout << "Flushes:      " << numFlushes << "\n";
 
 }

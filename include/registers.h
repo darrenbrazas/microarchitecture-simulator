@@ -10,7 +10,7 @@ struct RegisterFile {
 
     }
 
-    int write(int reg, int value) {
+    void write(int reg, int value) {
 
         if(reg != 0) {
 
