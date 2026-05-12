@@ -40,7 +40,12 @@ void MEM(EX_MEM& ex_mem, MEM_WB& mem_wb, Memory& mem) {
     }
 }
 
-void EX(ID_EX& id_ex, EX_MEM& ex_mem, IF_ID& if_id, int& programCounter, int& numFlushes, bool& running) {
+void EX(ID_EX& id_ex, EX_MEM& ex_mem, MEM_WB& mem_wb, IF_ID& if_id, int& programCounter, int& numFlushes, bool& running) {
+    // Save previous EX result BEFORE overwriting ex_mem (needed for EX->EX forwarding)
+    bool prev_ex_valid  = ex_mem.valid;
+    int  prev_ex_rd     = ex_mem.valid ? ex_mem.inst.rd : 0;
+    int  prev_ex_result = ex_mem.result;
+
     ex_mem.valid = id_ex.valid;
     if(!id_ex.valid) return;
 
@@ -50,6 +55,20 @@ void EX(ID_EX& id_ex, EX_MEM& ex_mem, IF_ID& if_id, int& programCounter, int& nu
 
     int val1 = id_ex.rs1_val;
     int val2 = id_ex.rs2_val;
+
+    // EX->EX forwarding: use saved previous-cycle result
+    if(prev_ex_valid && prev_ex_rd != 0) {
+        if(prev_ex_rd == id_ex.inst.rs1) val1 = prev_ex_result;
+        if(prev_ex_rd == id_ex.inst.rs2) val2 = prev_ex_result;
+    }
+
+    // MEM->EX forwarding
+    if(mem_wb.valid && mem_wb.inst.rd != 0) {
+        int fwd_val = (mem_wb.inst.opcode == 0x03) ? mem_wb.memData : mem_wb.result;
+        if(mem_wb.inst.rd == id_ex.inst.rs1) val1 = fwd_val;
+        if(mem_wb.inst.rd == id_ex.inst.rs2) val2 = fwd_val;
+    }
+
     int imm = id_ex.inst.immediate;
 
     switch(id_ex.inst.opcode) {
@@ -75,10 +94,7 @@ void EX(ID_EX& id_ex, EX_MEM& ex_mem, IF_ID& if_id, int& programCounter, int& nu
     //branch handling
     //branch opcode (B-type)
     if(id_ex.inst.opcode == 0x63) {
-
-
-        int val1 = id_ex.rs1_val;
-        int val2 = id_ex.rs2_val;
+        // use forwarded val1/val2, not raw register values
         bool taken = false;
 
         if(id_ex.inst.funct3 == 0x0 && val1 == val2){
@@ -133,18 +149,10 @@ void IF(IF_ID& if_id, Memory& mem, int& programCounter, bool& running) {
 
 bool hazard_detection(ID_EX& id_ex, EX_MEM& ex_mem, MEM_WB& mem_wb, IF_ID& if_id) {
     if(!if_id.valid) return false;
-    if(id_ex.valid && id_ex.inst.rd != 0) {
+    // With forwarding, only stall for load-use: value isn't ready until after MEM
+    if(id_ex.valid && id_ex.inst.opcode == 0x03 && id_ex.inst.rd != 0) {
         if (id_ex.inst.rd == if_id.inst.rs1) return true;
         if (id_ex.inst.rd == if_id.inst.rs2) return true;
-    }
-    // MEM ran before this check, so mem_wb holds a result not yet written back
-    if(ex_mem.valid && ex_mem.inst.rd != 0) {
-        if (ex_mem.inst.rd == if_id.inst.rs1) return true;
-        if (ex_mem.inst.rd == if_id.inst.rs2) return true;
-    }
-    if(mem_wb.valid && mem_wb.inst.rd != 0) {
-        if (mem_wb.inst.rd == if_id.inst.rs1) return true;
-        if (mem_wb.inst.rd == if_id.inst.rs2) return true;
     }
     return false;
 }
@@ -177,7 +185,7 @@ void  run_pipeline(Memory& mem, RegisterFile& rf){
         MEM(ex_mem, mem_wb, mem);
 
         //EX
-        EX(id_ex, ex_mem, if_id, programCounter, numFlushes, running);
+        EX(id_ex, ex_mem, mem_wb, if_id, programCounter, numFlushes, running);
 
         //Insert Hazard Detection
         if(hazard_detection(id_ex, ex_mem, mem_wb, if_id) == true) {
