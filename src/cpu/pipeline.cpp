@@ -40,7 +40,7 @@ void MEM(EX_MEM& ex_mem, MEM_WB& mem_wb, Memory& mem) {
     }
 }
 
-void EX(ID_EX& id_ex, EX_MEM& ex_mem, IF_ID& if_id, int& programCounter, int& numFlushes) {
+void EX(ID_EX& id_ex, EX_MEM& ex_mem, IF_ID& if_id, int& programCounter, int& numFlushes, bool& running) {
     ex_mem.valid = id_ex.valid;
     if(!id_ex.valid) return;
 
@@ -95,6 +95,7 @@ void EX(ID_EX& id_ex, EX_MEM& ex_mem, IF_ID& if_id, int& programCounter, int& nu
             programCounter = id_ex.pc + (id_ex.inst.immediate / 4);
             if_id.valid = false;
             id_ex.valid = false;
+            running = true; // branch redirects to valid code; undo any premature halt
             numFlushes++;
         }
 
@@ -130,17 +131,22 @@ void IF(IF_ID& if_id, Memory& mem, int& programCounter, bool& running) {
     programCounter++;
 }
 
-bool hazard_detection(ID_EX& id_ex, EX_MEM& ex_mem, IF_ID& if_id) {
-
-    if(!id_ex.valid) return false;
-    if(id_ex.inst.rd == 0) return false;
-
-    //returns true if a harzard is detected.
-    if (id_ex.inst.rd == if_id.inst.rs1) return true;
-    if (id_ex.inst.rd == if_id.inst.rs2) return true;
-
+bool hazard_detection(ID_EX& id_ex, EX_MEM& ex_mem, MEM_WB& mem_wb, IF_ID& if_id) {
+    if(!if_id.valid) return false;
+    if(id_ex.valid && id_ex.inst.rd != 0) {
+        if (id_ex.inst.rd == if_id.inst.rs1) return true;
+        if (id_ex.inst.rd == if_id.inst.rs2) return true;
+    }
+    // MEM ran before this check, so mem_wb holds a result not yet written back
+    if(ex_mem.valid && ex_mem.inst.rd != 0) {
+        if (ex_mem.inst.rd == if_id.inst.rs1) return true;
+        if (ex_mem.inst.rd == if_id.inst.rs2) return true;
+    }
+    if(mem_wb.valid && mem_wb.inst.rd != 0) {
+        if (mem_wb.inst.rd == if_id.inst.rs1) return true;
+        if (mem_wb.inst.rd == if_id.inst.rs2) return true;
+    }
     return false;
-
 }
 void  run_pipeline(Memory& mem, RegisterFile& rf){
 
@@ -161,46 +167,30 @@ void  run_pipeline(Memory& mem, RegisterFile& rf){
     MEM_WB mem_wb;
 
 
-    while(running){
+    // keep running until the pipeline is fully drained and no new instructions are coming
+    while(running || if_id.valid || id_ex.valid || ex_mem.valid || mem_wb.valid){
 
-    
         //WB
         WB(mem_wb, rf, instructionCount);
-        
+
         //MEM
         MEM(ex_mem, mem_wb, mem);
 
         //EX
-        EX(id_ex, ex_mem, if_id, programCounter, numFlushes);
+        EX(id_ex, ex_mem, if_id, programCounter, numFlushes, running);
 
         //Insert Hazard Detection
-
-        if(hazard_detection(id_ex, ex_mem, if_id) == true) {
-
-            //if it returns true that means a hazard detection was discovered thus we have to stall/bubble
-
+        if(hazard_detection(id_ex, ex_mem, mem_wb, if_id) == true) {
             id_ex.valid = false;
             numStalls++;
         } else {
-
-            //otherwise there is no hazard detection continue as needed
- 
             //ID
             ID(if_id, id_ex, rf);
 
-            //IF
-            IF(if_id, mem, programCounter, running);
+            //IF — only fetch new instructions while the program is still running
+            if(running) IF(if_id, mem, programCounter, running);
         }
 
-        cycles++;
-    }
-
-    // drain remaining instructions in pipeline
-    for(int i = 0; i < 4; i++) {
-        WB(mem_wb, rf, instructionCount);
-        MEM(ex_mem, mem_wb, mem);
-        EX(id_ex, ex_mem, if_id, programCounter, numFlushes);
-        ID(if_id, id_ex, rf);
         cycles++;
     }
 
