@@ -3,6 +3,7 @@
 #include "../../include/memory.h"
 #include "../../include/decode.h"
 #include "../../include/pipeline.h"
+#include "../../include/predictor.h"
 #include <iostream>
 
 void WB(MEM_WB& mem_wb, RegisterFile& rf, int& instructions) {
@@ -40,7 +41,7 @@ void MEM(EX_MEM& ex_mem, MEM_WB& mem_wb, Memory& mem) {
     }
 }
 
-void EX(ID_EX& id_ex, EX_MEM& ex_mem, MEM_WB& mem_wb, IF_ID& if_id, int& programCounter, int& numFlushes, bool& running) {
+void EX(ID_EX& id_ex, EX_MEM& ex_mem, MEM_WB& mem_wb, IF_ID& if_id, int& programCounter, int& numFlushes, bool& running, BranchPredictor& predictor, int& correctPredictions, int& wrongPredictions) {
     // Save previous EX result BEFORE overwriting ex_mem (needed for EX->EX forwarding)
     bool prev_ex_valid  = ex_mem.valid;
     int  prev_ex_rd     = ex_mem.valid ? ex_mem.inst.rd : 0;
@@ -106,6 +107,11 @@ void EX(ID_EX& id_ex, EX_MEM& ex_mem, MEM_WB& mem_wb, IF_ID& if_id, int& program
         }
 
         if(taken) {
+
+            //predictor
+            if(predictor.predict()) correctPredictions++;
+            else wrongPredictions++;
+            predictor.update(true);
             //if branch taken then we flush IF and ID and move the program counter to the branched location
             //increment number of flushes
             programCounter = id_ex.pc + (id_ex.inst.immediate / 4);
@@ -113,6 +119,11 @@ void EX(ID_EX& id_ex, EX_MEM& ex_mem, MEM_WB& mem_wb, IF_ID& if_id, int& program
             id_ex.valid = false;
             running = true; // branch redirects to valid code; undo any premature halt
             numFlushes++;
+        } else {
+
+            if(!predictor.predict()) correctPredictions++;
+            else wrongPredictions++;
+            predictor.update(false);
         }
 
     }
@@ -167,6 +178,12 @@ void  run_pipeline(Memory& mem, RegisterFile& rf){
 
     bool running = true;
 
+    //branch predictor
+
+    BranchPredictor predictor;
+    int correctPredictions = 0;
+    int wrongPredictions = 0;
+
     //declare the pipeline registers
 
     IF_ID if_id;
@@ -185,7 +202,7 @@ void  run_pipeline(Memory& mem, RegisterFile& rf){
         MEM(ex_mem, mem_wb, mem);
 
         //EX
-        EX(id_ex, ex_mem, mem_wb, if_id, programCounter, numFlushes, running);
+        EX(id_ex, ex_mem, mem_wb, if_id, programCounter, numFlushes, running, predictor, correctPredictions, wrongPredictions);
 
         //Insert Hazard Detection
         if(hazard_detection(id_ex, ex_mem, mem_wb, if_id) == true) {
@@ -211,5 +228,6 @@ void  run_pipeline(Memory& mem, RegisterFile& rf){
     std::cout << "CPI:          " << (float)cycles / instructionCount << "\n";
     std::cout << "Stalls:       " << numStalls << "\n";
     std::cout << "Flushes:      " << numFlushes << "\n";
+    std::cout << "Branch accuracy: " << (float)correctPredictions/(correctPredictions+wrongPredictions)*100 << "%\n";
 
 }

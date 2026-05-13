@@ -1,3 +1,5 @@
+#pragma once
+
 struct BranchPredictor {
 
     int counter = 0b01;
@@ -9,6 +11,10 @@ struct BranchPredictor {
 
     void update (bool taken) {
 
-        
+        if(taken) {
+            if(counter < 3 ) counter++;
+        } else{
+            if(counter > 0) counter--;
+        }
     }
 };
