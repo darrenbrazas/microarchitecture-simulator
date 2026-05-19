@@ -4,6 +4,7 @@
 #include "../../include/decode.h"
 #include "../../include/pipeline.h"
 #include "../../include/predictor.h"
+#include "../../include/cache.h"
 #include <iostream>
 
 void WB(MEM_WB& mem_wb, RegisterFile& rf, int& instructions) {
@@ -22,7 +23,7 @@ void WB(MEM_WB& mem_wb, RegisterFile& rf, int& instructions) {
     instructions++;
 }
 
-void MEM(EX_MEM& ex_mem, MEM_WB& mem_wb, Memory& mem) {
+void MEM(EX_MEM& ex_mem, MEM_WB& mem_wb, Memory& mem, Cache& cache) {
     mem_wb.valid = ex_mem.valid;
     if(!ex_mem.valid) return;
 
@@ -32,11 +33,13 @@ void MEM(EX_MEM& ex_mem, MEM_WB& mem_wb, Memory& mem) {
 
     // handle load
     if(ex_mem.inst.opcode == 0x03) {
-        mem_wb.memData = mem.load(ex_mem.result);
+        uint32_t result;
+        cache_load(cache, mem, ex_mem.result, result);
+        mem_wb.memData = result;
     }
     // handle store
     else if(ex_mem.inst.opcode == 0x23) {
-        mem.store(ex_mem.result, ex_mem.rs2_val);
+        cache_store(cache, mem, ex_mem.result, ex_mem.rs2_val);
         mem_wb.valid = false; // stores don't writeback
     }
 }
@@ -184,6 +187,10 @@ void  run_pipeline(Memory& mem, RegisterFile& rf){
     int correctPredictions = 0;
     int wrongPredictions = 0;
 
+    //cache
+
+    Cache cache;
+
     //declare the pipeline registers
 
     IF_ID if_id;
@@ -199,7 +206,7 @@ void  run_pipeline(Memory& mem, RegisterFile& rf){
         WB(mem_wb, rf, instructionCount);
 
         //MEM
-        MEM(ex_mem, mem_wb, mem);
+        MEM(ex_mem, mem_wb, mem, cache);
 
         //EX
         EX(id_ex, ex_mem, mem_wb, if_id, programCounter, numFlushes, running, predictor, correctPredictions, wrongPredictions);
@@ -228,6 +235,14 @@ void  run_pipeline(Memory& mem, RegisterFile& rf){
     std::cout << "CPI:          " << (float)cycles / instructionCount << "\n";
     std::cout << "Stalls:       " << numStalls << "\n";
     std::cout << "Flushes:      " << numFlushes << "\n";
-    std::cout << "Branch accuracy: " << (float)correctPredictions/(correctPredictions+wrongPredictions)*100 << "%\n";
 
-}
+    if(correctPredictions + wrongPredictions > 0)
+        std::cout << "Branch accuracy: " << (float)correctPredictions/(correctPredictions+wrongPredictions)*100 << "%\n";
+    else
+        std::cout << "Branch accuracy: N/A (no branches)\n";
+
+    if(cache.hits + cache.misses > 0)
+        std::cout << "Cache hit rate: " << (float)cache.hits/(cache.hits+cache.misses)*100 << "%\n";
+    else
+        std::cout << "Cache hit rate: N/A (no memory access)\n";
+    }

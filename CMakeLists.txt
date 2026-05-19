@@ -12,6 +12,7 @@ set(SOURCES
     src/isa/decode.cpp
     src/cpu/single_cycle.cpp
     src/cpu/pipeline.cpp
+    src/memory/cache.cpp
 )
 
 # Main executable
